@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sieve</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0A0A09;
+    --bg-2: #121210;
+    --fg: #D8D4C8;
+    --fg-dim: #8A8478;
+    --fg-faint: #4A4843;
+    --rust: #8C6B52;
+    --rust-dim: #564539;
+    --wire: #26261F;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100%;
+  }
+  body{
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  #snow{
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  main{
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8vh 24px 6vh;
+  }
+  h1{
+    font-weight: 700;
+    font-size: clamp(56px, 12vw, 120px);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .tagline{
+    font-weight: 400;
+    font-size: clamp(15px, 2vw, 18px);
+    color: var(--fg-dim);
+    margin-top: 20px;
+    max-width: 38ch;
+  }
+  .desc{
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--fg-faint);
+    max-width: 48ch;
+    margin-top: 14px;
+  }
+  .desc code{
+    color: var(--fg-dim);
+    background: var(--bg-2);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12.5px;
+  }
+  .install-label{
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+    margin-top: 36px;
+    margin-bottom: 10px;
+  }
+  .install{
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12.5px;
+    color: var(--fg-dim);
+    background: var(--bg-2);
+    border: 1px solid var(--wire);
+    border-radius: 3px;
+    padding: 12px 14px;
+    max-width: 92vw;
+    transition: border-color 0.3s ease, box-shadow 0.4s ease;
+  }
+  .install.copied{
+    border-color: var(--rust);
+    box-shadow: 0 0 0 4px rgba(140,107,82,0.14);
+  }
+  .toast{
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(6px) scale(0.92);
+    margin-bottom: 10px;
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 4px;
+    opacity: 0;
+    pointer-events: none;
+    white-space: nowrap;
+    transition: opacity 0.25s ease, transform 0.25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .toast::after{
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--fg);
+  }
+  .toast.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  .install code{
+    color: var(--fg);
+    white-space: pre;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .install code::-webkit-scrollbar{ display: none; }
+  .install button{
+    background: none;
+    border: none;
+    color: var(--fg-faint);
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    transition: color 0.2s ease;
+  }
+  .install button:hover{ color: var(--rust); }
+  .install button svg{ width: 14px; height: 14px; }
+  .install button.bounce{ animation: bounce 0.4s ease; }
+  @keyframes bounce{
+    0%{ transform: scale(1); }
+    35%{ transform: scale(0.75); }
+    65%{ transform: scale(1.25); }
+    100%{ transform: scale(1); }
+  }
+  .check-path{
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
+    animation: draw 0.35s ease forwards 0.05s;
+  }
+  @keyframes draw{ to{ stroke-dashoffset: 0; } }
+  .cta{
+    position: relative;
+    overflow: hidden;
+    margin-top: 28px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+    color: var(--bg);
+    background: var(--fg);
+    padding: 13px 22px;
+    border-radius: 3px;
+    text-decoration: none;
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    border: 1px solid var(--fg);
+  }
+  .cta::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.55) 50%, transparent 70%);
+    transform: translateX(-130%);
+    transition: transform 0.6s cubic-bezier(.2,.7,.2,1);
+  }
+  .cta:hover::before{ transform: translateX(130%); }
+  .cta span{ position: relative; z-index: 1; }
+  .cta:hover{
+    border-color: #B08458;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(140,107,82,0.25);
+  }
+  .cta svg{
+    width: 16px; height: 16px;
+    position: relative;
+    z-index: 1;
+    transition: transform 0.45s cubic-bezier(.34,1.56,.64,1);
+  }
+  .cta:hover svg{ transform: rotate(-18deg) scale(1.1); }
+
+  .shot-section{
+    position: relative;
+    z-index: 1;
+    max-width: 1180px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 0 32px 72px;
+  }
+  .panel{
+    background: var(--bg-2);
+    border: 1px solid var(--wire);
+    border-radius: 4px;
+    overflow: hidden;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .panel-head{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--wire);
+    font-size: 11px;
+    color: var(--fg-faint);
+  }
+  .panel-dot{
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--rust);
+    flex-shrink: 0;
+  }
+  .shot-body{
+    aspect-ratio: 16/10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      linear-gradient(90deg, rgba(120,113,95,0.07) 1px, transparent 1px) 0 0/24px 24px,
+      linear-gradient(rgba(120,113,95,0.07) 1px, transparent 1px) 0 0/24px 24px;
+  }
+  .shot-body img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .shot-fallback{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--fg-faint);
+    text-align: center;
+    padding: 0 20px;
+  }
+  .shot-fallback svg{ width: 28px; height: 28px; color: var(--wire); }
+
+  footer{
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 0 24px 32px;
+    font-size: 11px;
+    color: var(--fg-faint);
+  }
+  footer a{
+    color: var(--fg-dim);
+    text-decoration: none;
+    border-bottom: 1px solid var(--wire);
+  }
+  footer a:hover{ color: var(--rust); border-color: var(--rust); }
+
+  @media (max-width: 600px){
+    .shot-section{ padding: 0 20px 56px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="snow"></canvas>
+
+<main>
+  <h1>sieve</h1>
+  <p class="tagline">Просеивает конфиги, пока что-то не сработает.</p>
+  <p class="desc">Генератор и тестер стратегий обхода DPI для <code>winws</code> / <code>zapret</code>. Прогоняет все варианты подряд, оставляет только рабочие.</p>
+
+  <div class="install-label">установка</div>
+  <div class="install" id="install-pill">
+    <span class="toast" id="copy-toast">скопировано</span>
+    <code id="install-cmd">scoop bucket add elev1e1nSure https://github.com/elev1e1nSure/scoop-bucket; scoop install sieve</code>
+    <button id="copy-btn" aria-label="скопировать команду" title="скопировать">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="9" width="11" height="11" rx="1"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>
+    </button>
+  </div>
+  <br>
+  <a class="cta" href="https://github.com/elev1e1nSure/sieve" target="_blank" rel="noopener">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    <span>смотреть на github</span>
+  </a>
+
+</main>
+
+<section class="shot-section">
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-dot"></span>
+      <span>sieve.exe</span>
+    </div>
+    <div class="shot-body">
+      <img id="app-shot" src="screenshot.png" alt="скрин sieve" onerror="this.style.display='none'; document.getElementById('shot-fallback').style.display='flex';">
+      <div class="shot-fallback" id="shot-fallback" style="display:none;">Тут должен был быть скриншот...</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  собрал <a href="https://github.com/elev1e1nSure" target="_blank" rel="noopener">elev1e1nSure</a>
+</footer>
+
+<script>
+(function(){
+  const canvas = document.getElementById('snow');
+  const ctx = canvas.getContext('2d');
+  let w = 0, h = 0, dpr = 1;
+  let flakes = [];
+
+  function rnd(a,b){ return a + Math.random()*(b-a); }
+
+  function makeFlakes(){
+    const count = Math.round((w * h) / 18000);
+    flakes = Array.from({length: Math.max(20, count)}, () => ({
+      x: rnd(0, w),
+      y: rnd(0, h),
+      r: rnd(0.8, 2.2),
+      speed: rnd(0.15, 0.5),
+      drift: rnd(-0.15, 0.15),
+      opacity: rnd(0.15, 0.4)
+    }));
+  }
+
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = window.innerWidth;
+    h = window.innerHeight;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    makeFlakes();
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function loop(){
+    ctx.clearRect(0,0,w,h);
+    for(const f of flakes){
+      f.y += f.speed;
+      f.x += f.drift;
+      if(f.y > h + 4){ f.y = -4; f.x = rnd(0, w); }
+      if(f.x < -4) f.x = w + 4;
+      if(f.x > w + 4) f.x = -4;
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(120,116,108,${f.opacity})`;
+      ctx.arc(f.x, f.y, f.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!reduceMotion){ loop(); }
+
+  const copyBtn = document.getElementById('copy-btn');
+  const installCmd = document.getElementById('install-cmd');
+  const installPill = document.getElementById('install-pill');
+  const copyToast = document.getElementById('copy-toast');
+  const iconDefault = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="9" width="11" height="11" rx="1"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>';
+  const iconCheck = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="check-path" d="M5 13l4 4L19 7"/></svg>';
+  let copyTimer;
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(installCmd.textContent).then(() => {
+      clearTimeout(copyTimer);
+      copyBtn.innerHTML = iconCheck;
+      copyBtn.classList.remove('bounce');
+      void copyBtn.offsetWidth;
+      copyBtn.classList.add('bounce');
+      installPill.classList.add('copied');
+      copyToast.classList.add('show');
+      copyTimer = setTimeout(() => {
+        copyBtn.innerHTML = iconDefault;
+        installPill.classList.remove('copied');
+        copyToast.classList.remove('show');
+      }, 1500);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
