@@ -11,12 +11,12 @@ export default function Hero() {
     <main className="hero">
       <h1>sieve</h1>
       <p className="tagline">
-        Просеивает конфиги, пока что-то не сработает.
+        Сам находит способ обойти блокировки сайтов.
       </p>
       <p className="desc">
-        Генератор и тестер стратегий обхода DPI для{" "}
-        <code>winws</code> / <code>zapret</code>. Прогоняет все варианты
-        подряд, оставляет только рабочие.
+        Перебирает десятки настроек для обхода DPI-блокировок (для{" "}
+        <code>winws</code> / <code>zapret</code>) и оставляет
+        только те, что реально работают у вас.
       </p>
 
       <InstallPill />
